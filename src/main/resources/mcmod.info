@@ -1,0 +1,18 @@
+[
+  {
+    "modid": "datannouncements",
+    "name": "Dat Announcements",
+    "description": "A server side mod to add configurable chat announcements",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": [
+      "jtljac"
+    ],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
