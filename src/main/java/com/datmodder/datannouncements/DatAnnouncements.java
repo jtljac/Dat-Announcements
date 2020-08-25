@@ -1,8 +1,11 @@
 package com.datmodder.datannouncements;
 
-import com.datmodder.datannouncements.DelayedEvents.DelayedAnnouncementEvent;
+import com.datmodder.datannouncements.announcements.EventAnnouncement;
+import com.datmodder.datannouncements.announcements.EventSubAnnouncement;
+import com.datmodder.datannouncements.delayedevents.DelayedAnnouncementEvent;
 import com.datmodder.datannouncements.announcements.RepeatAnnouncement;
 import com.datmodder.datannouncements.announcements.YAMLFile;
+import com.datmodder.datannouncements.enums.Events;
 import com.demmodders.datmoddingapi.delayedexecution.DelayHandler;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
@@ -21,6 +24,7 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 @Mod(
         modid = DatAnnouncements.MOD_ID,
@@ -30,12 +34,16 @@ import java.util.ArrayList;
         dependencies = "required-after:datmoddingapi@[1.1.1,)"
 )
 public class DatAnnouncements {
-
     public static final String MOD_ID = "datannouncements";
     public static final String MOD_NAME = "Dat Announcements";
     public static final String VERSION = "1.0.0";
     public static final Logger LOG = LogManager.getLogger(DatAnnouncements.MOD_ID);
-    private File announceFilePath;
+    public static File announceFilePath;
+
+    public HashMap<Events, ArrayList<EventSubAnnouncement>> eventAnnouncments = new HashMap<>();
+
+    // Needed so we can cancel them when reloading
+    ArrayList<DelayedAnnouncementEvent> delayedEvents = new ArrayList<>();
 
     /**
      * This is the instance of your mod as created by Forge. It will never be null.
@@ -60,12 +68,22 @@ public class DatAnnouncements {
      */
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        DumperOptions testo = new DumperOptions();
-        testo.setIndent(4);
-        testo.setPrettyFlow(true);
+        loadAnnouncements();
+    }
+
+    public void reloadAnnouncements() {
+        for (DelayedAnnouncementEvent event : delayedEvents) {
+            event.cancel();
+        }
+        delayedEvents.clear();
+    }
+
+    public void loadAnnouncements(){
+        DumperOptions options = new DumperOptions();
+        options.setIndent(4);
+        options.setPrettyFlow(true);
         YAMLFile yaml;
-        Yaml loader = new Yaml(testo);
-        ArrayList<DelayedAnnouncementEvent> delayedEvents = new ArrayList<>();
+        Yaml loader = new Yaml(options);
 
         File theYaml = new File(announceFilePath, "announcements.yaml");
         if (theYaml.exists()) {
@@ -77,10 +95,23 @@ public class DatAnnouncements {
                 yaml = loader.loadAs(reader, YAMLFile.class);
 
                 if (!yaml.isEmpty()) {
+                    // Repeats
                     for (RepeatAnnouncement announcement : yaml.repeatAnnoucements) {
                         DelayedAnnouncementEvent dEvent = new DelayedAnnouncementEvent(announcement.firstDelay, announcement.interval, announcement.message);
                         delayedEvents.add(dEvent);
                         DelayHandler.addEvent(dEvent);
+                    }
+
+                    // Events
+                    for (EventAnnouncement announcement : yaml.eventAnnouncements) {
+                        ArrayList<EventSubAnnouncement> array;
+                        if (eventAnnouncments.containsKey(announcement.event)) {
+                            array = eventAnnouncments.get(announcement.event);
+                        } else {
+                            array = new ArrayList<>();
+                            eventAnnouncments.put(announcement.event, array);
+                        }
+                        array.add(new EventSubAnnouncement(announcement.message, announcement.target));
                     }
                 } else {
                     LOG.warn("Announcements file doesn't contain any announcements");
@@ -100,37 +131,6 @@ public class DatAnnouncements {
                 e.printStackTrace();
             }
         }
-//
-//        YAMLFile test = new YAMLFile();
-//        test.eventAnnouncements.add(new EventAnnouncement("test Message", Events.PlayerBrewedEvent, MessageTarget.Everyone));
-//        test.eventAnnouncements.add(new EventAnnouncement("test Messaged", Events.PlayerLeaveEvent, MessageTarget.CallingPlayer));
-//        test.eventAnnouncements.add(new EventAnnouncement("test Messages", Events.PlayerJoinEvent, MessageTarget.EveryoneElse));
-//
-//        test.repeatAnnoucements.add(new RepeatAnnouncement("testes", 10, 200));
-//        test.repeatAnnoucements.add(new RepeatAnnouncement("tested", 15, 2100));
-//        test.repeatAnnoucements.add(new RepeatAnnouncement("test", 1, 20));
-//
-//        try {
-//            FileWriter writer = new FileWriter(new File(filePath, "announcements.yaml"));
-//            writer.append(teste.dump(test));
-//            writer.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-
-        try {
-            test = teste.loadAs(new FileReader(new File(announceFilePath, "announcements.yaml")), YAMLFile.class);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * This is the final initialization event. Register actions from other mods here
-     */
-    @Mod.EventHandler
-    public void postinit(FMLPostInitializationEvent event) {
-
     }
 
     /**

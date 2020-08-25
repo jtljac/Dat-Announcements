@@ -1,25 +1,27 @@
-package com.datmodder.datannouncements.DelayedEvents;
+package com.datmodder.datannouncements.delayedevents;
 
 import com.datmodder.datannouncements.Util;
 import com.demmodders.datmoddingapi.delayedexecution.delayedevents.BaseDelayedEvent;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraftforge.common.ForgeHooks;
 
 public class DelayedAnnouncementEvent extends BaseDelayedEvent {
 
     final int fullDelay;
-    String message;
+    ITextComponent message;
     boolean cancelled = false;
 
     public DelayedAnnouncementEvent(int Delay, int FullDelay, String Message) {
         super(Delay);
         fullDelay = FullDelay;
-        message = Message;
+        message = ForgeHooks.newChatWithLinks(Message);
     }
 
     @Override
     public void execute() {
         Util.sendMessage(message);
 
-        exeTime = System.currentTimeMillis() + (fullDelay * 1000);
+        exeTime = System.currentTimeMillis() + (((long) fullDelay) * 1000);
     }
 
     @Override
